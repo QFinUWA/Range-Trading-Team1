@@ -24,10 +24,27 @@ def logic(account, lookback): # Logic function to be used for each time interval
     today = len(lookback)-1
 
     '''
-    
+
     Develop Logic Here
     
     '''
+
+'''
+identify_range() function:
+    Context: Called when the market has been identified to be sideways (the starting point of
+    which is passed as a parameter to the function). Will identify the range within which the
+    market is operating.
+
+    Input:  loopback - the lookback dataframe, containing all data up until this point in time
+            start - the date at which the market began drifting sideways
+
+    Output: a tuple of values representing the lower and upper bound, respectively
+'''
+def identify_range(lookback, start):
+    lower = min(lookback['close'][start:]) + std(loopback['close'][start:])
+    upper = max(lookback['close'][start:]) - std(loopback['close'][start:])
+
+    return (lower, upper)
 
 '''
 preprocess_data() function:
