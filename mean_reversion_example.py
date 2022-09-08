@@ -22,7 +22,8 @@ logic() function:
 def logic(account, lookback): # Logic function to be used for each time interval in backtest 
     
     today = len(lookback)-1
-    if(today > training_period): # If the lookback is long enough to calculate the Bollinger Bands
+
+    if(today > training_period and today < 10000): # If the lookback is long enough to calculate the Bollinger Bands
 
         if(lookback['close'][today] < lookback['BOLD'][today]): # If current price is below lower Bollinger Band, enter a long position
             for position in account.positions: # Close all current positions
@@ -60,7 +61,7 @@ def preprocess_data(list_of_stocks):
 
 if __name__ == "__main__":
     # list_of_stocks = ["TSLA_2020-03-01_2022-01-20_1min"] 
-    list_of_stocks = ["TSLA_2020-03-09_2022-01-28_15min", "AAPL_2020-03-24_2022-02-12_15min"] # List of stock data csv's to be tested, located in "data/" folder 
+    list_of_stocks = ["TSLA_2020-03-09_2022-01-28_15min"] # List of stock data csv's to be tested, located in "data/" folder 
     list_of_stocks_proccessed = preprocess_data(list_of_stocks) # Preprocess the data
     results = tester.test_array(list_of_stocks_proccessed, logic, chart=True) # Run backtest on list of stocks using the logic function
 
