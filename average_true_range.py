@@ -43,10 +43,10 @@ def preprocess_data(list_of_stocks):
     list_of_stocks_processed = []
     for stock in list_of_stocks:
         df = pd.read_csv("data/" + stock + ".csv", parse_dates=[0])
-        
+        df['prev-close'] = df['close'].shift()
         df['RANGE'] = df['high'] - df['low']                 # High - Low
-        df['H-CL'] = df['high'] - df['close']                # High - Close
-        df['L-CL'] = (df['low'] - df['close']).abs()         # Low - Close (ABSOLUTE)
+        df['H-CL'] = (df['high'] - df['prev-close']).abs()                # High - Previous Close
+        df['L-CL'] = (df['low'] - df['prev-close']).abs()         # Low - Previous Close (ABSOLUTE)
 
         df['TR'] = df[['RANGE','H-CL','L-CL']].max(axis=1) # Get TR
         df['ATR'] = df['TR'].rolling(training_period).mean() # Get ATR for Training Period
