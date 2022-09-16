@@ -24,8 +24,9 @@ logic() function:
 def logic(account, lookback): # Logic function to be used for each time interval in backtest 
     
     today = len(lookback)-1
-    buylongamount = account.buying_power*(1-1/((lookback['BOLD'][today]-lookback['close'][today])-1))
-    buyshortamount = account.buying_power*(1-1/((lookback['close'][today]-lookback['BOLU'][today])-1))
+    buyvariable = 2*standard_deviations
+    buylongamount = account.buying_power*(1-buyvariable/((lookback['BOLD'][today]-lookback['close'][today])+buyvariable))
+    buyshortamount = account.buying_power*(1-buyvariable/((lookback['close'][today]-lookback['BOLU'][today])+buyvariable))
     if(today > training_period): # If the lookback is long enough to calculate the Bollinger Bands
 
         if(lookback['close'][today] < lookback['BOLD'][today]): # If current price is below lower Bollinger Band, enter a long position

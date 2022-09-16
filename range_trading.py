@@ -6,8 +6,14 @@ import multiprocessing as mp
 from backtester import engine, tester
 from backtester import API_Interface as api
 
-training_period = 20 # How far the rolling average takes into calculation
-standard_deviations = 3.5 # Number of Standard Deviations from the mean the Bollinger Bands sit
+btlong = 50 # How far the rolling average takes into calculation
+btshort = 10
+btmedium = 20
+stdv_short = 1.5
+stdv_medium = 2 # Number of Standard Deviations from the mean the Bollinger Bands sit
+stdv_long = 2.5
+training_period = 20
+standard_deviations = 3.5
 
 '''
 logic() function:
@@ -18,10 +24,39 @@ logic() function:
 
     Output: none, but the account object will be modified on each call
 '''
+def preprocess_data(list_of_stocks):
+    list_of_stocks_processed = []
+    for stock in list_of_stocks:
+        df = pd.read_csv("data/" + stock + ".csv", parse_dates=[0])
+        df['TP'] = (df['close'] + df['low'] + df['high'])/3 # Calculate Typical Price
+        df['std'] = df['TP'].rolling(btmedium).std() # Calculate Standard Deviation
+        df['MA-TP'] = df['TP'].rolling(btmedium).mean() # Calculate Moving Average of Typical Price
+        df['BOLUM'] = df['MA-TP'] + stdv_medium*df['std'] # Calculate Long Upper Bollinger Band
+        df['BOLDM'] = df['MA-TP'] - stdv_medium*df['std'] # Calculate Long Lower Bollinger Band
+        df.to_csv("data/" + stock + "_Processed.csv", index=False) # Save to CSV
+        list_of_stocks_processed.append(stock + "_Processed")
+    return list_of_stocks_processed
 
 def logic(account, lookback): # Logic function to be used for each time interval in backtest 
     
     today = len(lookback)-1
+    
+    buyvariable = 2*standard_deviations
+    buylongamount = account.buying_power*(1-buyvariable/((lookback['BOLDM'][today]-lookback['close'][today])+buyvariable))
+    buyshortamount = account.buying_power*(1-buyvariable/((lookback['close'][today]-lookback['BOLUM'][today])+buyvariable))
+    if(today > btmedium): # If the lookback is long enough to calculate the Bollinger Bands
+
+        if(lookback['close'][today] < lookback['BOLDM'][today]): # If current price is below lower Bollinger Band, enter a long position
+            for position in account.positions: # Close all current positions
+                account.close_position(position, 1, lookback['close'][today])
+            if(account.buying_power > 0):
+                account.enter_position('long', buylongamount, lookback['close'][today]) # Enter a long position
+
+        if(lookback['close'][today] > lookback['BOLUM'][today]): # If today's price is above the upper Bollinger Band, enter a short position
+            for position in account.positions: # Close all current positions
+                account.close_position(position, 1, lookback['close'][today])
+            if(account.buying_power > 0):
+                account.enter_position('short', buyshortamount, lookback['close'][today]) # Enter a short position
 
     '''
     
