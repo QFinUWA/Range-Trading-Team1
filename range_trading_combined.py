@@ -1,6 +1,7 @@
 import pandas as pd
 import time
 import multiprocessing as mp
+import average_true_range
 
 # local imports
 from backtester import engine, tester
@@ -49,6 +50,17 @@ def exit_positions(account, lookback, today):
         account.close_position(position, 1, lookback['close'][today])
 
 '''
+mean() function:
+    Context: returns the mean of a set of data
+
+    Input: data
+
+    Ouptut: the mean
+'''
+def mean(data):
+    return sum(data)/len(data)
+
+'''
 adx() function:
     Context: returns a number between 0 and 100 representing the average directional index (ADX) of the data at the most recent date.
 
@@ -93,6 +105,7 @@ def logic(account, lookback): # Logic function to be used for each time interval
         return
 
     ranging = adx(lookback) < adx_ranging_threshold
+    global range_start
 
     if range_start == -1 and ranging:
         range_start = today
@@ -135,7 +148,7 @@ def preprocess_data(list_of_stocks):
 if __name__ == "__main__":
     # list_of_stocks = ["TSLA_2020-03-01_2022-01-20_1min"] 
     list_of_stocks = ["TSLA_2020-03-09_2022-01-28_15min", "AAPL_2020-03-24_2022-02-12_15min"] # List of stock data csv's to be tested, located in "data/" folder 
-    list_of_stocks_proccessed = preprocess_data(list_of_stocks) # Preprocess the data
+    list_of_stocks_proccessed = average_true_range.preprocess_data(list_of_stocks) # Preprocess the data
     results = tester.test_array(list_of_stocks_proccessed, logic, chart=True) # Run backtest on list of stocks using the logic function
 
     print("training period " + str(training_period))
