@@ -1,3 +1,6 @@
+from operator import truediv
+from pickle import TRUE
+from turtle import width
 import bokeh.plotting
 import pandas as pd
 import numpy as np
@@ -119,27 +122,21 @@ class backtest():
             for trade in self.account.opened_trades:
                 try:
                     x = time.mktime(trade.date.timetuple())*1000
-                    y = self.account.equity[np.where(self.data['date'] == trade.date.strftime("%Y-%m-%d"))[0][0]]
-                    if trade.type_ == 'long': p.circle(x, y, size=6, color='green', alpha=0.5)
-                    elif trade.type_ == 'short': p.circle(x, y, size=6, color='red', alpha=0.5)
+                    y = base_equity
+                    #self.account.equity[np.where(self.data['date'] == trade.date.strftime("%Y-%m-%d"))[0][0]]
+                    if trade.type_ == 'long': p.ellipse(x, y, width=1, height=0.4, color='green', alpha=0.5)
+                    #elif trade.type_ == 'short': p.circle(x, y, size=1, color='red', alpha=0.5)
                 except Exception as e:
-                    print(e)
+                    #print(e)
                     pass
 
             for trade in self.account.closed_trades:
                 try:
                     x = time.mktime(trade.date.timetuple())*1000
-                    y = self.account.equity[np.where(self.data['date'] == trade.date.strftime("%Y-%m-%d"))[0][0]]
-                    if trade.type_ == 'long': p.circle(x, y, size=6, color='blue', alpha=0.5)
-                    elif trade.type_ == 'short': p.circle(x, y, size=6, color='orange', alpha=0.5)
-                except:
+                    y = base_equity
+                    if trade.type_ == 'long': p.ellipse(x, y, width=1, height=0.4, color='blue', alpha=0.5)
+                    #elif trade.type_ == 'short': p.circle(x, y, size=6, color='orange', alpha=0.5)
+                except Exception as e:
                     pass
+                
         bokeh.plotting.show(p)
-    
-    def plotlyplotting(self, show_trades=False, title="Equity Curve"):
-
-        import plotly.express as px
-
-        df = px.data.gapminder().query("country=='Canada'")
-        fig = px.line(df, x="year", y="lifeExp", title='Life expectancy in Canada')
-        fig.show()
