@@ -24,50 +24,30 @@ logic() function:
 
     Output: none, but the account object will be modified on each call
 '''
-bbaseu = []
-bbased = []
-for i in [0,1,2]:
-    def preprocess_data(list_of_stocks):
-        list_of_stocks_processed = []
-        for stock in list_of_stocks:
-            df = pd.read_csv("data/" + stock + ".csv", parse_dates=[0])
-            df['TP'] = (df['close'] + df['low'] + df['high'])/3 # Calculate Typical Price
-            df['std'] = df['TP'].rolling(time).std() # Calculate Standard Deviation
-            df['MA-TP'] = df['TP'].rolling(bt[i]).mean() # Calculate Moving Average of Typical Price
-            df['BOLU'] = df['MA-TP'] + stdv[i]*df['std'] # Calculate Long Upper Bollinger Band
-            bbaseu.append['BOLU']
-            df['BOLDM'] = df['MA-TP'] - stdv[i]*df['std'] # Calculate Long Lower Bollinger Band
-            bbased.append['BOLD']
-
-            df.to_csv("data/" + stock + "_Processed.csv", index=False) # Save to CSV
-            list_of_stocks_processed.append(stock + "_Processed")
-        return list_of_stocks_processed
 
 def logic(account, lookback): # Logic function to be used for each time interval in backtest 
-    for j in [0,1,2]:
-        today = len(lookback)-1
+    today = len(lookback)-1
+
+    for i in [0,1,2]:
         buyvariable = buyvariablescale*standard_deviations
-        buylongamount = account.buying_power*(1-buyvariable/((lookback[bbased[j]][today]-lookback['close'][today])+buyvariable))
-        buyshortamount = account.buying_power*(1-buyvariable/((lookback['close'][today]-lookback[bbaseu[j]][today])+buyvariable))
+        buylongamount = account.buying_power*(1-buyvariable/((lookback["BOLD"+str(i)][today]-lookback['close'][today])+buyvariable))
+        buyshortamount = account.buying_power*(1-buyvariable/((lookback['close'][today]-lookback["BOLU"+str(i)][today])+buyvariable))
+
         if(today > bt[i]): # If the lookback is long enough to calculate the Bollinger Bands
 
-            if(lookback['close'][today] < lookback[bbased[j]][today]): # If current price is below lower Bollinger Band, enter a long position
+            if(lookback['close'][today] < lookback["BOLD"+str(i)][today]): # If current price is below lower Bollinger Band, enter a long position
                 for position in account.positions: # Close all current positions
                     account.close_position(position, 1, lookback['close'][today])
                 if(account.buying_power > 0):
                     account.enter_position('long', buylongamount, lookback['close'][today]) # Enter a long position
 
-            if(lookback['close'][today] > lookback[bbaseu[j]][today]): # If today's price is above the upper Bollinger Band, enter a short position
+            if(lookback['close'][today] > lookback["BOLU"+str(i)][today]): # If today's price is above the upper Bollinger Band, enter a short position
                 for position in account.positions: # Close all current positions
                     account.close_position(position, 1, lookback['close'][today])
                 if(account.buying_power > 0):
                     account.enter_position('short', buyshortamount, lookback['close'][today]) # Enter a short position
+        
 
-    '''
-    
-    Develop Logic Here
-    
-    '''
 
 '''
 preprocess_data() function:
@@ -82,14 +62,14 @@ def preprocess_data(list_of_stocks):
     list_of_stocks_processed = []
     for stock in list_of_stocks:
         df = pd.read_csv("data/" + stock + ".csv", parse_dates=[0])
-
-        '''
+        df['TP'] = (df['close'] + df['low'] + df['high'])/3 # Calculate Typical Price
         
-        Modify Processing of Data To Suit Personal Requirements.
+        for i in [0,1,2]:
+            df['std'] = df['TP'].rolling(bt[i]).std() # Calculate Standard Deviation
+            df['MA-TP'+str(i)] = df['TP'].rolling(bt[i]).mean() # Calculate Moving Average of Typical Price
+            df['BOLU'+str(i)] = df['MA-TP'+str(i)] + stdv[i]*df['std'] # Calculate Long Upper Bollinger Band
+            df['BOLD'+str(i)] = df['MA-TP'+str(i)] - stdv[i]*df['std'] # Calculate Long Lower Bollinger Band
         
-        '''
-
-
         df.to_csv("data/" + stock + "_Processed.csv", index=False) # Save to CSV
         list_of_stocks_processed.append(stock + "_Processed")
     return list_of_stocks_processed

@@ -26,12 +26,12 @@ identify_range() function:
     Output: a tuple of values representing the lower and upper bound, respectively
 '''
 def identify_range(lookback, start):
-    lower = min(lookback['close'][start:]) - bound_buffer*std(loopback['close'][start:])
-    upper = max(lookback['close'][start:]) + bound_buffer*std(loopback['close'][start:])
-    buy_signal = lower + enter_position_std*std(loopback['close'][start:])
-    sell_signal = upper - enter_position_std*std(loopback['close'][start:])
-    stop_loss_lower = lower - stop_loss*std(loopback['close'][start:])
-    stop_loss_upper = upper + stop_loss*std(loopback['close'][start:])
+    lower = min(lookback['close'][start:]) - bound_buffer*std(lookback['close'][start:])
+    upper = max(lookback['close'][start:]) + bound_buffer*std(lookback['close'][start:])
+    buy_signal = lower + enter_position_std*std(lookback['close'][start:])
+    sell_signal = upper - enter_position_std*std(lookback['close'][start:])
+    stop_loss_lower = lower - stop_loss*std(lookback['close'][start:])
+    stop_loss_upper = upper + stop_loss*std(lookback['close'][start:])
 
     return (lower, upper, buy_signal, sell_signal, stop_loss_lower, stop_loss_upper)
 
