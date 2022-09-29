@@ -6,11 +6,12 @@ import multiprocessing as mp
 from backtester import engine, tester
 from backtester import API_Interface as api
 
-training_period = 20 # How far the rolling average takes into calculation
+training_period = 20 # How far the rolling average and ADX take into calculation
 standard_deviations = 3.5 # Number of Standard Deviations from the mean the Bollinger Bands sit
 bound_buffer = 1 # How many SDs above/below the min/max of a given time period the ranges sit
 enter_position_std = 0.05 # How many SDs above/below the range bounds buy and sell signals are given at
 stop_loss = 1 # How many SDs above/below the range is considered a breakout and will cause all positions to be exited
+adx_ranging_threshold = 25 # ADX value below which market is considered to be ranging
 
 range_start = -1 # Global variable (not a parameter!!!) for the starting position of a range
 
@@ -48,6 +49,35 @@ def exit_positions(account):
         account.close_position(position, 1, lookback['close'][today])
 
 '''
+adx() function:
+    Context: returns a number between 0 and 100 representing the average directional index (ADX) of the data at the most recent date.
+
+    Input: lookback - the data, up to the current date
+
+    Output: integer between 0 and 100
+'''
+def adx(lookback):
+    today = len(lookback) - 1
+    if len(lookback) < 2*training_period + 1:
+        return 100
+
+    dx_array = []
+
+    for i in range(training_period):
+        ATR = lookback['ATR'][today-i]
+
+        smoothed_plusDM = mean([lookback['high'][today-i-x]-lookback['high'][today-i-1-x] for x in range(training_period)])
+        smoothed_minusDM = mean([lookback['low'][today-i-1-x]-lookback['low'][today-i-x] for x in range(training_period)])
+
+        plusDI = (smoothed_plusDM / ATR)*100
+        minusDI = (smoothed_minusDM / ATR)*100
+        DX = (abs(plusDI - minusDI)/abs(plusDI + minusDI))*100
+        dx_array.append(DX)
+
+    ADX = sum(dx_array) / training_period
+    return ADX
+
+'''
 logic() function:
     Context: Called for every row in the input data.
 
@@ -56,21 +86,19 @@ logic() function:
 
     Output: none, but the account object will be modified on each call
 '''
-
 def logic(account, lookback): # Logic function to be used for each time interval in backtest 
     today = len(lookback)-1
 
-    # test if ranging
-    # set a boolean variable ranging to True or False based on whether the market is ranging
-    # if range_start == -1 and ranging is True:
-    #     set range_start to the start of the range (i.e. `today`)
-    # elif range_start != -1 and ranging is True:
-    #     do nothing
-    # elif range_start != -1 and ranging is False:
-    #     liquidate all positions using exit_positions(account)
-    #     set range_start to -1
-    # elif range_start == -1 and ranging is False:
-    #     do nothing
+    if today + 1 < 2*training_period + 1: # make sure there is enough data for calculations to work
+        return
+
+    ranging = adx(lookback) < adx_ranging_threshold
+
+    if range_start == -1 and ranging:
+        range_start = today
+    elif range_start != -1 and not ranging:
+        exit_positions(account)
+        range_start = -1
 
     if ranging:
         lower, upper, buy_signal, sell_signal, stop_loss_lower, stop_loss_upper = identify_range(lookback, range_start)
