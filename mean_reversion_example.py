@@ -1,4 +1,3 @@
-from statistics import stdev
 import pandas as pd
 import time
 import multiprocessing as mp
@@ -6,7 +5,6 @@ import multiprocessing as mp
 # local imports
 from backtester import engine, tester
 from backtester import API_Interface as api
-from backtester.account import Account
 
 training_period = 20 # How far the rolling average takes into calculation
 standard_deviations = 3.5 # Number of Standard Deviations from the mean the Bollinger Bands sit
@@ -24,22 +22,20 @@ logic() function:
 def logic(account, lookback): # Logic function to be used for each time interval in backtest 
     
     today = len(lookback)-1
-    buyvariable = 2*standard_deviations
-    buylongamount = account.buying_power*(1-buyvariable/((lookback['BOLD'][today]-lookback['close'][today])+buyvariable))
-    buyshortamount = account.buying_power*(1-buyvariable/((lookback['close'][today]-lookback['BOLU'][today])+buyvariable))
-    if(today > training_period): # If the lookback is long enough to calculate the Bollinger Bands
+
+    if(today > training_period and today < 10000): # If the lookback is long enough to calculate the Bollinger Bands
 
         if(lookback['close'][today] < lookback['BOLD'][today]): # If current price is below lower Bollinger Band, enter a long position
             for position in account.positions: # Close all current positions
                 account.close_position(position, 1, lookback['close'][today])
             if(account.buying_power > 0):
-                account.enter_position('long', buylongamount, lookback['close'][today]) # Enter a long position
+                account.enter_position('long', account.buying_power, lookback['close'][today]) # Enter a long position
 
         if(lookback['close'][today] > lookback['BOLU'][today]): # If today's price is above the upper Bollinger Band, enter a short position
             for position in account.positions: # Close all current positions
                 account.close_position(position, 1, lookback['close'][today])
             if(account.buying_power > 0):
-                account.enter_position('short', buyshortamount, lookback['close'][today]) # Enter a short position
+                account.enter_position('short', account.buying_power, lookback['close'][today]) # Enter a short position
 
 '''
 preprocess_data() function:
