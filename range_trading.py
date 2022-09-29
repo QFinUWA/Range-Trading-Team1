@@ -27,12 +27,12 @@ identify_range() function:
     Output: a tuple of values representing the lower and upper bound, respectively
 '''
 def identify_range(lookback, start):
-    lower = min(lookback['close'][start:]) - bound_buffer*std(loopback['close'][start:])
-    upper = max(lookback['close'][start:]) + bound_buffer*std(loopback['close'][start:])
-    buy_signal = lower + enter_position_std*std(loopback['close'][start:])
-    sell_signal = upper - enter_position_std*std(loopback['close'][start:])
-    stop_loss_lower = lower - stop_loss*std(loopback['close'][start:])
-    stop_loss_upper = upper + stop_loss*std(loopback['close'][start:])
+    lower = min(lookback['close'][start:]) - bound_buffer*standard_deviations(lookback['close'][start:])
+    upper = max(lookback['close'][start:]) + bound_buffer*standard_deviations(lookback['close'][start:])
+    buy_signal = lower + enter_position_std*standard_deviations(lookback['close'][start:])
+    sell_signal = upper - enter_position_std*standard_deviations(lookback['close'][start:])
+    stop_loss_lower = lower - stop_loss*standard_deviations(lookback['close'][start:])
+    stop_loss_upper = upper + stop_loss*standard_deviations(lookback['close'][start:])
 
     return (lower, upper, buy_signal, sell_signal, stop_loss_lower, stop_loss_upper)
 
@@ -44,7 +44,7 @@ exit_positions() function:
 
     Output: void
 '''
-def exit_positions(account):
+def exit_positions(account, lookback, today):
     for position in account.positions:
         account.close_position(position, 1, lookback['close'][today])
 
@@ -105,12 +105,12 @@ def logic(account, lookback): # Logic function to be used for each time interval
         price = lookback['close'][today]
 
         if price <= stop_loss_lower or price >= stop_loss_upper:
-            exit_positions(account)
+            exit_positions(account, lookback, today)
         elif price <= buy_signal:
-            exit_positions(account)
+            exit_positions(account, lookback, today)
             account.enter_position('long', account.buying_power, price)
         elif price >= sell_signal:
-            exit_positions(account)
+            exit_positions(account, lookback, today)
             account.enter_position('short', account.buying_power, price)
     else:
         range_start = -1
