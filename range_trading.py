@@ -61,6 +61,16 @@ def logic(account, lookback): # Logic function to be used for each time interval
     today = len(lookback)-1
 
     # test if ranging
+    # set a boolean variable ranging to True or False based on whether the market is ranging
+    # if range_start == -1 and ranging is True:
+    #     set range_start to the start of the range (i.e. `today`)
+    # elif range_start != -1 and ranging is True:
+    #     do nothing
+    # elif range_start != -1 and ranging is False:
+    #     liquidate all positions using exit_positions(account)
+    #     set range_start to -1
+    # elif range_start == -1 and ranging is False:
+    #     do nothing
 
     if ranging:
         lower, upper, buy_signal, sell_signal, stop_loss_lower, stop_loss_upper = identify_range(lookback, range_start)
