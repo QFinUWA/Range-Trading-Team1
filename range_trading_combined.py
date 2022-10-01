@@ -1,7 +1,10 @@
+from re import X
 import pandas as pd
+import numpy as np
 import time
 import multiprocessing as mp
-import average_true_range
+
+from pyparsing import null_debug_action
 
 # local imports
 from backtester import engine, tester
@@ -27,13 +30,13 @@ identify_range() function:
 
     Output: a tuple of values representing the lower and upper bound, respectively
 '''
-def identify_range(lookback, start):
-    lower = min(lookback['close'][start:]) - bound_buffer*standard_deviations(lookback['close'][start:])
-    upper = max(lookback['close'][start:]) + bound_buffer*standard_deviations(lookback['close'][start:])
-    buy_signal = lower + enter_position_std*standard_deviations(lookback['close'][start:])
-    sell_signal = upper - enter_position_std*standard_deviations(lookback['close'][start:])
-    stop_loss_lower = lower - stop_loss*standard_deviations(lookback['close'][start:])
-    stop_loss_upper = upper + stop_loss*standard_deviations(lookback['close'][start:])
+def identify_range(lookback, start, today):
+    lower = min(lookback['close'][start:today+1]) - bound_buffer*standard_deviations(lookback['close'][start:today+1])
+    upper = max(lookback['close'][start:today+1]) + bound_buffer*standard_deviations(lookback['close'][start:today+1])
+    buy_signal = lower + enter_position_std*standard_deviations(lookback['close'][start:today+1])
+    sell_signal = upper - enter_position_std*standard_deviations(lookback['close'][start:today+1])
+    stop_loss_lower = lower - stop_loss*standard_deviations(lookback['close'][start:today+1])
+    stop_loss_upper = upper + stop_loss*standard_deviations(lookback['close'][start:today+1])
 
     return (lower, upper, buy_signal, sell_signal, stop_loss_lower, stop_loss_upper)
 
@@ -56,18 +59,17 @@ mean() function:
     Input: data
 
     Ouptut: the mean
-'''
+
 def mean(data):
     return sum(data)/len(data)
 
-'''
 adx() function:
     Context: returns a number between 0 and 100 representing the average directional index (ADX) of the data at the most recent date.
 
     Input: lookback - the data, up to the current date
 
     Output: integer between 0 and 100
-'''
+
 def adx(lookback):
     today = len(lookback) - 1
     if len(lookback) < 2*training_period + 1:
@@ -88,6 +90,7 @@ def adx(lookback):
 
     ADX = sum(dx_array) / training_period
     return ADX
+'''
 
 '''
 logic() function:
@@ -98,13 +101,13 @@ logic() function:
 
     Output: none, but the account object will be modified on each call
 '''
-def logic(account, lookback): # Logic function to be used for each time interval in backtest 
+def logic(account, lookback): # Logic function to be used for each time training_period in backtest 
     today = len(lookback)-1
 
     if today + 1 < 2*training_period + 1: # make sure there is enough data for calculations to work
         return
-
-    ranging = adx(lookback) < adx_ranging_threshold
+    
+    ranging = lookback['ADX'][today] < adx_ranging_threshold
     global range_start
 
     if range_start == -1 and ranging:
@@ -114,7 +117,8 @@ def logic(account, lookback): # Logic function to be used for each time interval
         range_start = -1
 
     if ranging:
-        lower, upper, buy_signal, sell_signal, stop_loss_lower, stop_loss_upper = identify_range(lookback, range_start)
+        print("yes")
+        lower, upper, buy_signal, sell_signal, stop_loss_lower, stop_loss_upper = identify_range(lookback, range_start, today)
         price = lookback['close'][today]
 
         if price <= stop_loss_lower or price >= stop_loss_upper:
@@ -131,7 +135,7 @@ def logic(account, lookback): # Logic function to be used for each time interval
 '''
 preprocess_data() function:
     Context: Called once at the beginning of the backtest. TOTALLY OPTIONAL. 
-             Each of these can be calculated at each time interval, however this is likely slower.
+             Each of these can be calculated at each time training_period, however this is likely slower.
 
     Input:  list_of_stocks - a list of stock data csvs to be processed
 
@@ -141,6 +145,33 @@ def preprocess_data(list_of_stocks):
     list_of_stocks_processed = []
     for stock in list_of_stocks:
         df = pd.read_csv("data/" + stock + ".csv", parse_dates=[0])
+
+        df['prev-close'] = df['close'].shift()
+        df['RANGE'] = df['high'] - df['low']                 # High - Low
+        df['H-CL'] = (df['high'] - df['prev-close']).abs()   # High - Previous Close
+        df['L-CL'] = (df['low'] - df['prev-close']).abs()    # Low - Previous Close (ABSOLUTE)
+
+        df['TR'] = df[['RANGE','H-CL','L-CL']].max(axis=1)   # Get TR
+        df['ATR'] = df['TR'].rolling(training_period).mean() # Get ATR for Training Period
+
+        df['prev-high']= df['high'].shift()
+        df['prev-low']= df['low'].shift()
+
+        df['plusDM'] = df['high']-df['prev-high']
+        df['minusDM'] = df['prev-low']-df['low']
+
+        df['plusDM'] = np.where((df['plusDM'] > df['minusDM']) & (df['plusDM']>0), df['plusDM'], 0.0)
+        df['minusDM'] = np.where((df['minusDM'] > df['plusDM']) & (df['minusDM']>0), df['minusDM'], 0.0)
+
+        df['smoothed_plusDM']  = df['plusDM'].rolling(training_period).sum()
+        df['smoothed_minusDM'] = df['minusDM'].rolling(training_period).sum()
+        
+        df['plusDI']  = df['smoothed_plusDM']  /  df['TR'].rolling(training_period).sum()*100
+        df['minusDI'] = df['smoothed_minusDM'] /  df['TR'].rolling(training_period).sum()*100
+        df['DX'] = ((df['plusDI']-df['minusDI']).abs()/(df['plusDI']+df['minusDI']).abs())*100
+        
+        df['ADX'] = df['DX'].rolling(training_period).mean()
+
         df.to_csv("data/" + stock + "_Processed.csv", index=False) # Save to CSV
         list_of_stocks_processed.append(stock + "_Processed")
     return list_of_stocks_processed
@@ -148,8 +179,8 @@ def preprocess_data(list_of_stocks):
 if __name__ == "__main__":
     # list_of_stocks = ["TSLA_2020-03-01_2022-01-20_1min"] 
     list_of_stocks = ["TSLA_2020-03-09_2022-01-28_15min", "AAPL_2020-03-24_2022-02-12_15min"] # List of stock data csv's to be tested, located in "data/" folder 
-    list_of_stocks_proccessed = average_true_range.preprocess_data(list_of_stocks) # Preprocess the data
-    results = tester.test_array(list_of_stocks_proccessed, logic, chart=True) # Run backtest on list of stocks using the logic function
+    list_of_stocks_proccessed = preprocess_data(list_of_stocks) # Preprocess the data
+    results = tester.test_array(list_of_stocks_proccessed, logic, chart=False) # Run backtest on list of stocks using the logic function
 
     print("training period " + str(training_period))
     print("standard deviations " + str(standard_deviations))

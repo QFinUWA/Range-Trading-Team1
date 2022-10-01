@@ -1,3 +1,7 @@
 Buy and Hold,Strategy,Longs,Sells,Shorts,Covers,Stdev_Strategy,Stdev_Hold,Stock
+<<<<<<< HEAD
+519.47,8.12,1331,1331,1200,1200,548.5563237802588,2198.354154543364,TSLA_2020-03-09_2022-01-28_15min_Processed
+=======
 519.47,0.0,0,0,0,0,0.0,2198.354154543364,TSLA_2020-03-09_2022-01-28_15min_Processed
 168.75,0.0,0,0,0,0,0.0,500.4086903325458,AAPL_2020-03-24_2022-02-12_15min_Processed
+>>>>>>> parent of e895a1a (updates)
